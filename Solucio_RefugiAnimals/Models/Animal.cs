@@ -32,6 +32,11 @@ public class Animal
     [Required]
     public virtual required Xip Xip { get; set; }
 
+    // P2 · Un animal pot no tenir adoptant: ? i SENSE [Required]
+    // (un [Required] aquí faria la relació obligatòria, just el contrari del que volem).
+    // Com amb el xip, hi va l'objecte: la columna AdoptantID la crea EF (veure RefugiContext)
+    public virtual Adoptant? Adoptant { get; set; }
+
     public Animal()
     {
         DataEntrada = DateTime.Today;   // per defecte, la data d'avui

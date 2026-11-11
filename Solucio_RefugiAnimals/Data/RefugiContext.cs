@@ -8,6 +8,7 @@ public class RefugiContext : DbContext
     // 1 · Els DbSet: una propietat per taula
     public DbSet<Animal> Animal { get; set; }
     public DbSet<Xip> Xip { get; set; }
+    public DbSet<Adoptant> Adoptant { get; set; }   // P2: sense DbSet no podem fer _context.Adoptant
 
     // 2 · On és la BD i els proxies del lazy loading
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -30,6 +31,16 @@ public class RefugiContext : DbContext
             .HasForeignKey<Animal>("XipID")     // EF hi posa un índex únic: un xip, un sol animal
             .IsRequired()
             .OnDelete(DeleteBehavior.Restrict);
+
+        // P2 · Adoptant 1 → N Animal. La FK va a Animal (el costat N) i pot ser NULL.
+        modelBuilder.Entity<Animal>()
+            .HasOne(a => a.Adoptant)
+            .WithMany(ad => ad.Animals)
+            .HasForeignKey("AdoptantID")        // columna AdoptantID a la taula Animal (int, nullable)
+            .IsRequired(false)                  // un animal pot no tenir adoptant
+            .OnDelete(DeleteBehavior.SetNull);  // si s'esborra l'adoptant, els seus animals queden sense adoptant.
+                                                // Amb Cascade s'esborrarien els animals!
+        // Si a Animal hi poses la propietat public int? AdoptantID, aleshores .HasForeignKey(a => a.AdoptantID)
 
         modelBuilder.Entity<Animal>()
             .Property(a => a.Especie)

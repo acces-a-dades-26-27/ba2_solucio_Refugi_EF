@@ -116,3 +116,83 @@ foreach (Animal dolent in dolents)
         db.ChangeTracker.Clear();   // si no, l'animal dolent continua pendent i el següent SaveChanges tornaria a petar
     }
 }
+
+
+// ================================================================
+// ============ SESSIÓ 2 · ADOPTANTS ==============================
+// ================================================================
+
+// ============ Nivell 1 · Dades ============
+// El Bruc ja estava adoptat a P1 (EstaAdoptat = true i DataAdopcio): ara li posem adoptant, la Marta.
+// Un animal adoptat ha de tenir adoptant: si no, la Marta no tindria cap gos.
+// El llegim de la BD: després del ChangeTracker.Clear() de l'extra, la variable de la llista animals ja no la segueix EF
+Animal bruc = db.Animal.First(a => a.Xip.Codi == "724098100000004");
+
+Adoptant marta = new Adoptant() { DNI = "12345678Z", Nom = "Marta", Cognoms = "Puig Soler", TeJardi = true };
+Adoptant pau = new Adoptant() { DNI = "87654321X", Nom = "Pau", Cognoms = "Ferrer Vidal", TeJardi = false };
+bruc.Adoptant = marta;
+
+// Crear l'objecte no n'hi ha prou: cal afegir-lo al context i desar-lo.
+// I ABANS de cridar Adoptar, que busca l'adoptant a la BD.
+db.Adoptant.AddRange(marta, pau);
+db.SaveChanges();
+
+AdoptantService adoptantService = new AdoptantService(db);
+
+// Una funció local per poder mostrar-ho abans i després de cada canvi
+void MostrarAdoptants()
+{
+    // Ho llegim de la BD amb el servei, no de les variables marta i pau
+    foreach (Adoptant ad in adoptantService.GetTots())
+    {
+        Console.WriteLine(ad);
+        if (ad.Animals.Count == 0)
+        {
+            Console.WriteLine("   (cap animal adoptat)");
+        }
+        foreach (Animal an in ad.Animals)      // cada adoptant AMB els seus animals
+        {
+            Console.WriteLine($"   {an}");
+        }
+    }
+}
+
+Console.WriteLine("\n--- Adoptants amb els seus animals ---");
+MostrarAdoptants();
+
+// ============ Nivell 1 · Adoptar ============
+// Una adopció correcta i un cas per cada return false.
+// Cada prova ha de fallar NOMÉS per la condició que vols provar.
+Console.WriteLine("\n--- Adoptar ---");
+adoptantService.Adoptar("12345678Z", "724098100000002");    // bé: la Marta té jardí i adopta el Thor (gos)
+adoptantService.Adoptar("87654321X", "724098100000008");    // bé: el Pau no té jardí, però el Floc és un conill
+adoptantService.Adoptar("00000000T", "724098100000005");    // false: no hi ha cap adoptant amb aquest DNI
+adoptantService.Adoptar("12345678Z", "724098100000999");    // false: no hi ha cap animal amb aquest xip
+adoptantService.Adoptar("12345678Z", "724098100000004");    // false: el Bruc ja està adoptat
+adoptantService.Adoptar("87654321X", "724098100000003");    // false: la Kira és un gos i el Pau no té jardí
+// Per provar el jardí cal un gos NO adoptat: amb el Bruc fallaria abans per "ja adoptat" i mai arribaria al jardí
+
+// ============ Nivell 2 · Màxim 3 animals ============
+// La Marta té el Bruc i el Thor: el 3r entra i el 4t no
+Console.WriteLine("\n--- Màxim 3 animals per adoptant ---");
+adoptantService.Adoptar("12345678Z", "724098100000005");    // bé: la Mixa, 3r animal de la Marta
+adoptantService.Adoptar("12345678Z", "724098100000006");    // false: la Lluna seria el 4t
+
+Console.WriteLine("\n--- Adoptants després de les adopcions ---");
+MostrarAdoptants();
+
+// ============ Nivell 2 · Retornar ============
+Console.WriteLine("\n--- Retornar ---");
+adoptantService.Retornar("724098100000002");    // bé: la Marta retorna el Thor
+adoptantService.Retornar("724098100000003");    // false: la Kira no està adoptada
+adoptantService.Retornar("724098100000999");    // false: no hi ha cap animal amb aquest xip
+
+Console.WriteLine("\n--- Adoptants després de retornar (la Marta ja no té el Thor) ---");
+MostrarAdoptants();
+
+// ============ Nivell 3 · Llistat ============
+// Ara la Marta en té 2 (Bruc i Mixa) i el Pau 1 (Floc)
+Console.WriteLine("\n--- Adoptants amb 1 animal o més ---");
+adoptantService.LlistatAdoptants(1);            // Marta (2) i després Pau (1)
+Console.WriteLine("\n--- Adoptants amb 3 animals o més ---");
+adoptantService.LlistatAdoptants(3);            // cap
