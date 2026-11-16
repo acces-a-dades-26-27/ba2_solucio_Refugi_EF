@@ -68,6 +68,13 @@ public class AdoptantService
         animal.Adoptant = adoptant;             // relacionar: EF omple la columna AdoptantID
         animal.EstaAdoptat = true;
         animal.DataAdopcio = DateTime.Today;
+
+        // P3 · Un animal adoptat deixa de tenir voluntaris: Clear() esborra totes les seves files de Cura.
+        // Els voluntaris no s'esborren, només la relació.
+        // Així NO: foreach (Voluntari v in animal.Voluntaris) { animal.Voluntaris.Remove(v); }
+        // treure elements de la llista que estàs recorrent peta (InvalidOperationException)
+        animal.Voluntaris.Clear();
+
         _context.SaveChanges();                 // el servei desa: sense això, a la BD no ha canviat res
         Console.WriteLine($"{adoptant.Nom} {adoptant.Cognoms} ha adoptat {animal.Nom}");
         return true;

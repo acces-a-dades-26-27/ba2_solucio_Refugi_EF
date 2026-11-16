@@ -196,3 +196,100 @@ Console.WriteLine("\n--- Adoptants amb 1 animal o més ---");
 adoptantService.LlistatAdoptants(1);            // Marta (2) i després Pau (1)
 Console.WriteLine("\n--- Adoptants amb 3 animals o més ---");
 adoptantService.LlistatAdoptants(3);            // cap
+
+
+// ================================================================
+// ============ SESSIÓ 3 · VOLUNTARIS =============================
+// ================================================================
+
+// ============ Nivell 1 · Dades ============
+// Després de P2: Luna, Thor (retornat) i Kira són gossos no adoptats. La Lluna i el Pelut són gats no adoptats.
+// Com amb el Bruc, els animals es LLEGEIXEN de la BD: les variables de la llista animals ja no les segueix EF
+Animal luna = db.Animal.First(a => a.Xip.Codi == "724098100000001");
+Animal kira = db.Animal.First(a => a.Xip.Codi == "724098100000003");
+Animal lluna = db.Animal.First(a => a.Xip.Codi == "724098100000006");
+
+// Variables normals del Program: res de public (això és per als atributs d'una classe, aquí no compila)
+Voluntari aina = new Voluntari() { Nom = "Aina", Torn = Torn.MATI };
+Voluntari joan = new Voluntari() { Nom = "Joan", Torn = Torn.TARDA };
+Voluntari nuria = new Voluntari() { Nom = "Núria", Torn = Torn.CAP_DE_SETMANA };
+aina.Animals.Add(luna);         // a les dades, la relació es posa afegint a la col·lecció d'un costat
+aina.Animals.Add(kira);
+joan.Animals.Add(lluna);
+
+// Crear-los no n'hi ha prou: cal afegir-los al context i desar. I ABANS de cridar el servei, que els busca a la BD
+db.Voluntari.AddRange(aina, joan, nuria);
+db.SaveChanges();
+
+VoluntariService voluntariService = new VoluntariService(db);
+
+void MostrarVoluntaris()
+{
+    // Ho llegim de la BD amb el servei, no de les variables aina, joan i nuria
+    foreach (Voluntari v in voluntariService.GetTots())
+    {
+        Console.WriteLine(v);
+        if (v.Animals.Count == 0)
+        {
+            Console.WriteLine("   (no té cura de cap animal)");
+        }
+        foreach (Animal an in v.Animals)      // cada voluntari AMB els seus animals
+        {
+            Console.WriteLine($"   {an}");
+        }
+    }
+}
+
+Console.WriteLine("\n--- Voluntaris amb els seus animals ---");
+MostrarVoluntaris();
+
+// ============ Nivell 1 · AssignarAnimal ============
+// Una assignació correcta i un cas per cada return false.
+// Cada prova ha de fallar NOMÉS per la condició que vols provar: per al màxim de 4 cal un animal
+// que no estigui adoptat ni assignat ja a aquell voluntari, si no fallaria abans
+Console.WriteLine("\n--- Assignar animals ---");
+voluntariService.AssignarAnimal("Núria", "724098100000002");    // bé: la Núria té cura del Thor
+voluntariService.AssignarAnimal("Pere", "724098100000002");     // false: no hi ha cap voluntari amb aquest nom
+voluntariService.AssignarAnimal("Aina", "724098100000999");     // false: no hi ha cap animal amb aquest xip
+voluntariService.AssignarAnimal("Aina", "724098100000004");     // false: el Bruc està adoptat
+voluntariService.AssignarAnimal("Aina", "724098100000001");     // false: l'Aina ja té cura de la Luna
+voluntariService.AssignarAnimal("Aina", "724098100000007");     // bé: el Pelut, 3r animal de l'Aina
+voluntariService.AssignarAnimal("Aina", "724098100000009");     // bé: el Piu, 4t animal de l'Aina
+voluntariService.AssignarAnimal("Aina", "724098100000006");     // false: l'Aina ja en té 4 (la Lluna és del Joan, però pot tenir més d'un voluntari)
+
+Console.WriteLine("\n--- Voluntaris després d'assignar ---");
+MostrarVoluntaris();
+
+// ============ Nivell 2 · DesassignarAnimal ============
+Console.WriteLine("\n--- Desassignar animals ---");
+voluntariService.DesassignarAnimal("Aina", "724098100000009");  // bé: l'Aina ja no té cura del Piu (en tenia 4 i en pot treure)
+voluntariService.DesassignarAnimal("Pere", "724098100000009");  // false: no hi ha cap voluntari amb aquest nom
+voluntariService.DesassignarAnimal("Aina", "724098100000999");  // false: no hi ha cap animal amb aquest xip
+voluntariService.DesassignarAnimal("Núria", "724098100000001"); // false: la Núria no té cura de la Luna
+
+// Desassignar no esborra l'animal: el Piu continua a la BD
+Animal? piu = animalService.CercaPerXip("724098100000009");
+if (piu != null)
+{
+    Console.WriteLine($"Continua al refugi: {piu}");
+}
+
+// ============ Nivell 2 · Adoptar treu els voluntaris ============
+// La Marta té el Bruc i la Mixa i té jardí: pot adoptar la Kira, que és de l'Aina
+Console.WriteLine("\n--- Adoptar un animal que tenia voluntaris ---");
+adoptantService.Adoptar("12345678Z", "724098100000003");        // bé: la Marta adopta la Kira
+Console.WriteLine($"Voluntaris de la Kira: {kira.Voluntaris.Count}");
+
+Console.WriteLine("\n--- Voluntaris després de l'adopció (l'Aina ja no té la Kira) ---");
+MostrarVoluntaris();
+
+// ============ Nivell 3 · RegistrarPasseig ============
+// Ara l'Aina té cura de la Luna (gos) i del Pelut (gat)
+Console.WriteLine("\n--- Passejos ---");
+voluntariService.RegistrarPasseig("Aina", "724098100000001", 30);   // bé: abans 0, ara 30
+voluntariService.RegistrarPasseig("Aina", "724098100000001", 45);   // bé: abans 30, ara 75 (s'acumulen)
+voluntariService.RegistrarPasseig("Joan", "724098100000006", 20);   // false: la Lluna és un gat
+voluntariService.RegistrarPasseig("Núria", "724098100000001", 20);  // false: la Núria no té cura de la Luna
+
+Console.WriteLine("\n--- Voluntaris al final ---");
+MostrarVoluntaris();

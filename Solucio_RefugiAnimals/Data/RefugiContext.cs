@@ -9,6 +9,7 @@ public class RefugiContext : DbContext
     public DbSet<Animal> Animal { get; set; }
     public DbSet<Xip> Xip { get; set; }
     public DbSet<Adoptant> Adoptant { get; set; }   // P2: sense DbSet no podem fer _context.Adoptant
+    public DbSet<Voluntari> Voluntari { get; set; } // P3. La taula Cura NO té DbSet: és la intermèdia i la gestiona EF
 
     // 2 · On és la BD i els proxies del lazy loading
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -44,6 +45,20 @@ public class RefugiContext : DbContext
 
         modelBuilder.Entity<Animal>()
             .Property(a => a.Especie)
+            .HasConversion<string>();
+
+        // P3 · Voluntari N → N Animal. Sense Fluent API també funciona, però la taula es diria AnimalVoluntari.
+        // UsingEntity només li posa nom a la taula intermèdia: les columnes (AnimalsAnimalID, VoluntarisVoluntariID) les crea EF.
+        // Compte si poses els noms de les FK a mà amb UsingEntity<Dictionary<string, object>>: un espai de més
+        // dins del text ("AnimalID ") també és el nom de la columna
+        modelBuilder.Entity<Voluntari>()
+            .HasMany(v => v.Animals)
+            .WithMany(a => a.Voluntaris)
+            .UsingEntity(j => j.ToTable("Cura"));
+
+        // Com l'Especie: el torn surt com a text a la BD
+        modelBuilder.Entity<Voluntari>()
+            .Property(v => v.Torn)
             .HasConversion<string>();
 
         // [Range] i el mínim de [StringLength] EF no els comprova en desar.

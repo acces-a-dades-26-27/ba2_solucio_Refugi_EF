@@ -37,12 +37,18 @@ public class Animal
     // Com amb el xip, hi va l'objecte: la columna AdoptantID la crea EF (veure RefugiContext)
     public virtual Adoptant? Adoptant { get; set; }
 
+    // P3 · L'altre costat de la N-M amb Voluntari: les DUES classes tenen la col·lecció.
+    // Sense aquesta, EF no sap que és una N-M i ho fa 1-N (posa una columna VoluntariID a Animal)
+    public virtual ICollection<Voluntari> Voluntaris { get; set; }
+
     public Animal()
     {
         DataEntrada = DateTime.Today;   // per defecte, la data d'avui
         EstaAdoptat = false;
         DataAdopcio = null;
         QuotaAdopcio = 0;
+        // P3 · Inicialitzada, com Animals a l'Adoptant i al Voluntari
+        Voluntaris = new HashSet<Voluntari>();
     }
 
     public override string ToString()
