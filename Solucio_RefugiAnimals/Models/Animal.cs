@@ -41,6 +41,14 @@ public class Animal
     // Sense aquesta, EF no sap que és una N-M i ho fa 1-N (posa una columna VoluntariID a Animal)
     public virtual ICollection<Voluntari> Voluntaris { get; set; }
 
+    // P4 · Relació RECURSIVA: les dues navegacions són del mateix tipus, Animal.
+    // Un animal pot no tenir mare (ha arribat de fora del refugi): ? i SENSE [Required], com l'Adoptant.
+    // Hi va l'objecte, no l'id: la columna MareID la crea EF (veure RefugiContext)
+    public virtual Animal? Mare { get; set; }
+
+    // L'altre costat: les cries d'aquest animal. Sense aquesta col·lecció no es pot fer el WithMany
+    public virtual ICollection<Animal> Cries { get; set; }
+
     public Animal()
     {
         DataEntrada = DateTime.Today;   // per defecte, la data d'avui
@@ -49,8 +57,13 @@ public class Animal
         QuotaAdopcio = 0;
         // P3 · Inicialitzada, com Animals a l'Adoptant i al Voluntari
         Voluntaris = new HashSet<Voluntari>();
+        // P4 · Inicialitzada: si no, un animal nou té Cries = null
+        // i el primer Cries.Count o Cries.Add peta (NullReferenceException)
+        Cries = new HashSet<Animal>();
     }
 
+    // P4 · Al ToString NO hi posem {Mare.Nom}: si l'animal no té mare, Mare és null i peta.
+    // La mare i les cries es mostren al Program, comprovant el null (veure MostrarFamilia)
     public override string ToString()
     {
         return $"{AnimalID}. {Nom} ({Especie}) · entrada {DataEntrada:dd/MM/yyyy} · xip {Xip.Codi}";

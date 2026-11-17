@@ -61,6 +61,17 @@ public class RefugiContext : DbContext
             .Property(v => v.Torn)
             .HasConversion<string>();
 
+        // P4 · Animal 1 → N Animal (una mare, moltes cries). Relació RECURSIVA:
+        // és una 1-N normal amb Animal als dos costats. La FK va a la cria (el costat N) i pot ser NULL.
+        modelBuilder.Entity<Animal>()
+            .HasOne(a => a.Mare)
+            .WithMany(m => m.Cries)
+            .HasForeignKey("MareID")            // columna MareID a la taula Animal (int, nullable)
+            .IsRequired(false)                  // un animal pot no tenir mare
+            .OnDelete(DeleteBehavior.SetNull);  // si s'esborra la mare, les cries queden sense mare.
+                                                // Restrict (la de la pista) també val: no deixa esborrar una mare amb cries.
+                                                // Amb Cascade s'esborrarien les cries!
+
         // [Range] i el mínim de [StringLength] EF no els comprova en desar.
         // Amb un CHECK ho comprova la BD: SQLite sí que el respecta i, si no es compleix, SaveChanges peta.
         modelBuilder.Entity<Animal>()

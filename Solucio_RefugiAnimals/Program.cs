@@ -293,3 +293,108 @@ voluntariService.RegistrarPasseig("Núria", "724098100000001", 20);  // false: l
 
 Console.WriteLine("\n--- Voluntaris al final ---");
 MostrarVoluntaris();
+
+
+// ================================================================
+// ============ SESSIÓ 4 · FAMÍLIES ===============================
+// ================================================================
+
+// ============ Nivell 1 · Dades ============
+// Cada animal amb el seu xip, i cada xip DIFERENT: el Codi és únic i, si en repeteixes un, SaveChanges peta.
+// Amb el Pes: el CHECK de P1 no deixa desar un animal amb Pes = 0 (el valor per defecte del double)
+Animal rocky = new Animal() { Nom = "Rocky", Especie = Especie.GOS, EsFemella = false, Pes = 4.5,
+    DataNaixement = DateTime.Today.AddMonths(-4), Xip = new Xip() { Codi = "724098100000013" } };
+Animal bimba = new Animal() { Nom = "Bimba", Especie = Especie.GOS, EsFemella = true, Pes = 4.1,
+    DataNaixement = DateTime.Today.AddMonths(-4), Xip = new Xip() { Codi = "724098100000014" } };
+Animal coco = new Animal() { Nom = "Coco", Especie = Especie.GOS, EsFemella = true, Pes = 16,
+    DataNaixement = DateTime.Today.AddYears(-5), Xip = new Xip() { Codi = "724098100000012" } };
+Animal nala = new Animal() { Nom = "Nala", Especie = Especie.GOS, EsFemella = true, Pes = 19.5,
+    DataNaixement = DateTime.Today.AddYears(-9), Xip = new Xip() { Codi = "724098100000011" } };   // sense mare
+
+// La relació es posa afegint a la col·lecció de la mare, com aina.Animals.Add(luna) a P3
+coco.Cries.Add(rocky);
+coco.Cries.Add(bimba);
+nala.Cries.Add(coco);
+
+// N'hi ha prou amb afegir la Nala: EF segueix les cries i insereix tota la família, amb els xips i les MareID
+db.Animal.Add(nala);
+db.SaveChanges();
+
+void MostrarFamilia()
+{
+    // Ho llegim de la BD amb el servei, no de les variables nala, coco...
+    foreach (Animal a in animalService.GetTots())
+    {
+        // Mare pot ser null: a.Mare.Nom sense comprovar-ho peta (NullReferenceException) amb el primer animal sense mare.
+        // També val: string mare = a.Mare?.Nom ?? "sense mare";
+        string mare;
+        if (a.Mare != null)
+        {
+            mare = $"mare {a.Mare.Nom}";
+        }
+        else
+        {
+            mare = "sense mare";
+        }
+        // a.Cries el carrega el lazy loading
+        Console.WriteLine($"{a.AnimalID}. {a.Nom} · {mare} · {a.Cries.Count} cries");
+    }
+}
+
+Console.WriteLine("\n--- Animals amb la seva mare i les seves cries ---");
+MostrarFamilia();
+
+// ============ Nivell 1 · CanviarMare ============
+// Un canvi correcte i un cas per cada return false. Cada prova ha de fallar NOMÉS per la condició que vols provar
+Console.WriteLine("\n--- Canviar la mare ---");
+animalService.CanviarMare("724098100000014", "724098100000011");   // bé: la Bimba passa a ser cria de la Nala
+animalService.CanviarMare("724098100000014", "724098100000011");   // false: la Bimba ja té la Nala de mare
+
+// El null NO és un error: vol dir "sense mare". Mostrem el bool perquè aquí és on molts retornaven false
+bool senseMare = animalService.CanviarMare("724098100000014", null);   // bé: la Bimba es queda sense mare
+Console.WriteLine($"   retorna {senseMare}");
+animalService.CanviarMare("724098100000014", null);                // false: ja estava sense mare
+
+animalService.CanviarMare("724098100000014", "724098100000013");   // false: el Rocky és mascle
+animalService.CanviarMare("724098100000999", "724098100000012");   // false: no hi ha cap cria amb aquest xip
+animalService.CanviarMare("724098100000014", "724098100000999");   // false: no hi ha cap mare amb aquest xip
+animalService.CanviarMare("724098100000014", "724098100000012");   // bé: la Bimba torna a ser cria de la Coco
+
+Console.WriteLine("\n--- Animals després de canviar la mare (la família torna a ser com al principi) ---");
+MostrarFamilia();
+
+// ============ Nivell 2 · RegistrarCria ============
+// La cria es crea aquí amb new i es passa a la funció: és el servei qui la desa, si tot és correcte.
+// Cada cria dolenta només té malament el que es prova: és un gos, ha nascut fa poc i té un xip nou
+Console.WriteLine("\n--- Registrar cries ---");
+animalService.RegistrarCria("724098100000012", new Animal() { Nom = "Pipa", Especie = Especie.GOS, EsFemella = true, Pes = 2.3,
+    DataNaixement = DateTime.Today.AddMonths(-1), Xip = new Xip() { Codi = "724098100000015" } });   // bé: la Coco té una cria nova
+animalService.RegistrarCria("724098100000013", new Animal() { Nom = "Max", Especie = Especie.GOS, EsFemella = false, Pes = 1.5,
+    DataNaixement = DateTime.Today.AddDays(-10), Xip = new Xip() { Codi = "724098100000016" } });    // false: el Rocky és mascle
+animalService.RegistrarCria("724098100000012", new Animal() { Nom = "Misha", Especie = Especie.GAT, EsFemella = true, Pes = 0.8,
+    DataNaixement = DateTime.Today.AddMonths(-1), Xip = new Xip() { Codi = "724098100000017" } });   // false: un gat no pot ser cria de la Coco
+animalService.RegistrarCria("724098100000012", new Animal() { Nom = "Ringo", Especie = Especie.GOS, EsFemella = false, Pes = 2.6,
+    DataNaixement = DateTime.Today.AddMonths(-1), Xip = new Xip() { Codi = "724098100000011" } });   // false: aquest xip és el de la Nala
+// No les demana l'enunciat, però són les altres condicions de la funció
+animalService.RegistrarCria("724098100000012", new Animal() { Nom = "Duc", Especie = Especie.GOS, EsFemella = false, Pes = 20,
+    DataNaixement = DateTime.Today.AddYears(-6), Xip = new Xip() { Codi = "724098100000018" } });    // false: el Duc és més gran que la Coco
+animalService.RegistrarCria("724098100000999", new Animal() { Nom = "Lia", Especie = Especie.GOS, EsFemella = true, Pes = 2,
+    DataNaixement = DateTime.Today.AddMonths(-1), Xip = new Xip() { Codi = "724098100000019" } });   // false: no hi ha cap mare amb aquest xip
+
+// La Coco ha de tenir 3 cries (Rocky, Bimba i Pipa) i cap de les dolentes ha d'haver arribat a la BD
+Console.WriteLine("\n--- Animals després de registrar les cries ---");
+MostrarFamilia();
+
+// ============ Nivell 3 · Descendents ============
+Console.WriteLine("\n--- Descendents ---");
+Console.WriteLine("Descendents de la Nala:");
+foreach (Animal a in animalService.Descendents("724098100000011"))      // Coco, Rocky, Bimba i Pipa
+{
+    Console.WriteLine($"   {a.Nom}");
+}
+
+List<Animal> descendentsRocky = animalService.Descendents("724098100000013");
+if (descendentsRocky.Count == 0)
+{
+    Console.WriteLine("El Rocky no té descendents");                    // un animal sense cries: llista buida
+}
