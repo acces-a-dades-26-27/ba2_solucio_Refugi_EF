@@ -221,4 +221,125 @@ public class AnimalService
         }
         // Així NO: recórrer animal.Cries sense la crida recursiva. Surten les cries, però no les cries de les cries
     }
+
+    // ================================================================
+    // P5 · DESPESA DEL MES
+    // ================================================================
+
+    // La despesa base de cada espècie. private: com AfegirDescendents, és una peça interna del servei.
+    // Els literals porten m: són decimal. 60 sense m és un int i passa, però 1.3 sense m és double i no compila
+    private decimal DespesaBase(Especie especie)
+    {
+        // Especie és un enum: es compara amb Especie.GOS, no amb el text "GOS"
+        switch (especie)
+        {
+            case Especie.GOS:
+                return 60m;
+            case Especie.GAT:
+                return 40m;
+            case Especie.CONILL:
+                return 15m;
+            case Especie.AU:
+                return 10m;
+            default:
+                return 20m;     // ALTRES. Sense default no compila ("not all code paths return a value"),
+                                // encara que hi hagi un case per cada valor de l'enum
+        }
+    }
+
+    // Nivell 1 · k, amb els modificadors del nivell 2 i el resum del nivell 3
+    public void CalcularDespesaMes()
+    {
+        // ToList() primer, com a la pista: dins el bucle fem servir navegacions (Voluntaris, Cries)
+        // i el lazy loading les carrega amb consultes noves mentre la primera encara s'estaria llegint.
+        // Només els NO adoptats, i el filtre el fa la BD.
+        // Error típic: recórrer tots els animals i cobrar el mes també als adoptats
+        List<Animal> animals = _context.Animal
+            .Where(a => !a.EstaAdoptat)
+            .OrderBy(a => a.AnimalID)
+            .ToList();
+
+        // Nivell 3 · Es calcula DINS el mateix bucle: al final no es torna a consultar la BD
+        decimal total = 0;
+        Animal? mesCar = null;
+        decimal despesaMesCar = 0;
+
+        foreach (Animal a in animals)
+        {
+            // Es guarda el valor ABANS de sumar, com els minuts previs de RegistrarPasseig.
+            // Si es llegeix després de sumar, la prèvia i l'actual surten iguals
+            decimal previ = a.DespesaAcumulada;
+            decimal despesa = DespesaBase(a.Especie);
+
+            // Nivell 2 · Els modificadors MULTIPLIQUEN, un sobre l'altre: 60 × 1,3 × 1,1.
+            // Error típic: sumar els percentatges, 60 × (1 + 0,3 + 0,1), que no dona el mateix
+            List<string> modificadors = new List<string>();
+
+            // a.Voluntaris el carrega el lazy loading. Count > 0, no != null: la col·lecció mai és null (constructor)
+            if (a.Voluntaris.Count > 0)
+            {
+                // −10% és per 0,9. Error típic: despesa - 0.1m, que treu 10 cèntims, no el 10%
+                despesa = despesa * 0.9m;
+                modificadors.Add("voluntaris -10%");
+            }
+
+            // Com diu l'enunciat, n'hi ha prou amb restar els anys. >= 8: amb 8 anys justos ja és sènior
+            int anys = DateTime.Today.Year - a.DataNaixement.Year;
+            if (anys >= 8)
+            {
+                despesa = despesa * 1.3m;
+                modificadors.Add("sènior +30%");
+            }
+
+            // Només les cries NO adoptades. Error típic: a.Cries.Count, que compta també les adoptades
+            // (i aleshores adoptar la Coco no canvia res a la Nala)
+            int criesNoAdoptades = a.Cries.Count(c => !c.EstaAdoptat);
+            if (criesNoAdoptades > 0)
+            {
+                // +10% PER CRIA: amb 2 cries, × 1,2. No × 1,1 una sola vegada sense mirar quantes n'hi ha
+                despesa = despesa * (1 + 0.1m * criesNoAdoptades);
+                modificadors.Add($"{criesNoAdoptades} cries +{criesNoAdoptades * 10}%");
+            }
+
+            // Als cèntims: amb tres modificadors surten tres decimals (77,220) i la columna és (8,2)
+            despesa = Math.Round(despesa, 2);
+
+            // ACUMULA: se SUMA al que ja hi havia. Amb a.DespesaAcumulada = despesa
+            // cada mes substitueix l'anterior i la segona crida no dona el doble
+            a.DespesaAcumulada = previ + despesa;
+
+            string textModificadors;
+            if (modificadors.Count == 0)
+            {
+                textModificadors = "sense modificadors";
+            }
+            else
+            {
+                textModificadors = string.Join(", ", modificadors);
+            }
+            Console.WriteLine($"{a.Nom}: {previ:F2} € + {despesa:F2} € = {a.DespesaAcumulada:F2} € · {textModificadors}");
+
+            // Nivell 3 · Es compara amb la despesa DEL MES, no amb DespesaAcumulada:
+            // el que es demana és qui ha costat més AQUEST mes, no en total
+            total = total + despesa;
+            if (mesCar == null || despesa > despesaMesCar)
+            {
+                mesCar = a;
+                despesaMesCar = despesa;
+            }
+        }
+
+        // UN cop, fora del bucle, com a la pista: desa tots els animals de cop.
+        // Sense això, la consola enganya: el context recorda els canvis en memòria i el mes 2 surt bé,
+        // però a la BD tot és 0. Es veu obrint la BD o amb un context nou
+        _context.SaveChanges();
+
+        // Nivell 3 · Res de _context.Animal.Sum(...) ni OrderByDescending(...) aquí: seria tornar a consultar la BD.
+        // I la despesa del mes no és a la BD: a la BD només hi ha l'acumulada
+        Console.WriteLine($"Total del mes: {total:F2} €");
+        if (mesCar != null)     // si no hi ha cap animal al refugi, mesCar és null i mesCar.Nom petaria
+        {
+            Console.WriteLine($"L'animal que ha costat més aquest mes: {mesCar.Nom} ({despesaMesCar:F2} €)");
+        }
+    }
 }

@@ -398,3 +398,45 @@ if (descendentsRocky.Count == 0)
 {
     Console.WriteLine("El Rocky no té descendents");                    // un animal sense cries: llista buida
 }
+
+
+// ================================================================
+// ============ SESSIÓ 5 · DESPESA DEL MES =======================
+// ================================================================
+
+// Al refugi (no adoptats) hi ha: Luna, Thor, Lluna, Pelut, Piu, Nala, Coco, Rocky, Bimba i Pipa.
+// Bruc, Mixa, Floc i Kira estan adoptats: no han de sortir
+
+// ============ Nivell 1 · Dos mesos ============
+// La funció no rep res: cada crida és un mes més. La DespesaAcumulada no es posa a mà: surt 0 del constructor
+Console.WriteLine("\n--- Despesa del mes 1 ---");
+animalService.CalcularDespesaMes();
+// Si al mes 2 l'actual no és el doble, no se suma a l'anterior. Si la consola surt bé però a la BD tot és 0, falta el SaveChanges
+Console.WriteLine("\n--- Despesa del mes 2 (l'actual ha de ser el doble que al mes 1) ---");
+animalService.CalcularDespesaMes();
+
+// ============ Nivell 2 · La Nala ============
+// Al mes 1, la Nala (9 anys, sense voluntaris, la Coco no adoptada) ha de donar 60 × 1,3 × 1,1 = 85,80 €.
+// Altres valors per comprovar: Luna 54,00 (voluntaris), Pelut 46,80 (voluntaris i sènior),
+// Coco 78,00 (3 cries, +30%), Piu 10,00 (sense modificadors: l'Aina el va desassignar a P3)
+
+// Per adoptar la Coco cal algú amb jardí (és un gos) i amb lloc: la Marta ja en té 3 i el Pau no té jardí.
+// Error típic: provar-ho amb la Marta, no veure que Adoptar diu "No es pot adoptar" i no entendre per què la Nala no canvia
+Adoptant laia = new Adoptant() { DNI = "11223344B", Nom = "Laia", Cognoms = "Serra Roca", TeJardi = true };
+db.Adoptant.Add(laia);
+db.SaveChanges();       // ABANS de cridar Adoptar, que busca l'adoptant a la BD
+
+Console.WriteLine("\n--- La Laia adopta la Coco ---");
+adoptantService.Adoptar("11223344B", "724098100000012");
+
+// La Coco ja no surt i la Nala no té cap cria al refugi: 60 × 1,3 = 78,00 €
+Console.WriteLine("\n--- Despesa del mes 3 (la Nala passa de 85,80 a 78,00 €) ---");
+animalService.CalcularDespesaMes();
+
+// Ho llegim de la BD: 85,80 + 85,80 + 78,00 = 249,60 €
+Animal nalaBD = db.Animal.First(a => a.Xip.Codi == "724098100000011");
+Console.WriteLine($"Despesa acumulada de la Nala: {nalaBD.DespesaAcumulada:F2} €");
+
+// ============ Nivell 3 · Resum del mes ============
+// Surt al final de cada crida. Mesos 1 i 2: total 544,60 €, la Nala la més cara (85,80 €).
+// Mes 3: total 458,80 €, la Nala continua sent la més cara (78,00 €)

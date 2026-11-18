@@ -27,6 +27,12 @@ public class Animal
     [Precision(8, 2)]               // queda al model, SQLite no la força
     public decimal QuotaAdopcio { get; set; }
 
+    // P5 · Diners: decimal, com la QuotaAdopcio. Amb double, despesa * 1.3m no compila
+    // (no es pot multiplicar double per decimal) i la temptació és treure la m i passar-ho tot a double.
+    // La columna nova la crea l'EnsureDeleted/EnsureCreated del Program: sense això, "no such column: DespesaAcumulada"
+    [Precision(8, 2)]
+    public decimal DespesaAcumulada { get; set; }
+
     // A la relació hi va l'objecte, no l'id: la columna XipID la crea EF (veure RefugiContext)
     // Tot animal porta xip: required obliga a posar-li en crear-lo
     [Required]
@@ -55,6 +61,7 @@ public class Animal
         EstaAdoptat = false;
         DataAdopcio = null;
         QuotaAdopcio = 0;
+        DespesaAcumulada = 0;           // P5 · per defecte 0, com la QuotaAdopcio
         // P3 · Inicialitzada, com Animals a l'Adoptant i al Voluntari
         Voluntaris = new HashSet<Voluntari>();
         // P4 · Inicialitzada: si no, un animal nou té Cries = null
