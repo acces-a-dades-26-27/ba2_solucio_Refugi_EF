@@ -55,6 +55,10 @@ public class Animal
     // L'altre costat: les cries d'aquest animal. Sense aquesta col·lecció no es pot fer el WithMany
     public virtual ICollection<Animal> Cries { get; set; }
 
+    // P6 · L'altre costat de la 1-N amb Visita. Sense aquesta col·lecció no es pot fer el WithMany.
+    // virtual, com totes les navegacions: sense, amb UseLazyLoadingProxies el programa peta en arrencar
+    public virtual ICollection<Visita> Visites { get; set; }
+
     public Animal()
     {
         DataEntrada = DateTime.Today;   // per defecte, la data d'avui
@@ -67,6 +71,9 @@ public class Animal
         // P4 · Inicialitzada: si no, un animal nou té Cries = null
         // i el primer Cries.Count o Cries.Add peta (NullReferenceException)
         Cries = new HashSet<Animal>();
+        // P6 · Inicialitzada, com Cries i Voluntaris: si no, un animal nou té Visites = null
+        // i el primer Visites.Add o Visites.Count peta (NullReferenceException)
+        Visites = new HashSet<Visita>();
     }
 
     // P4 · Al ToString NO hi posem {Mare.Nom}: si l'animal no té mare, Mare és null i peta.

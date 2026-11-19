@@ -139,4 +139,55 @@ public class VoluntariService
         Console.WriteLine($"{voluntari.Nom} ha passejat {animal.Nom} {minuts} minuts · abans {minutsPrevis}, ara {voluntari.MinutsPasseig}");
         return true;
     }
+
+    // ================================================================
+    // P6 · ESTADÍSTIQUES
+    // ================================================================
+
+    // Nivell 2 · q
+    public void LlistatVoluntaris(int minAnimals)
+    {
+        // v.Animals.Count dins la consulta no és lazy loading: EF ho tradueix a un COUNT de la taula Cura.
+        // Es fa servir al Where, a l'OrderBy i al Select, i tot és UNA consulta
+        var llista = _context.Voluntari
+            .Where(v => v.Animals.Count >= minAnimals)
+            .OrderByDescending(v => v.Animals.Count)
+            .Select(v => new
+            {
+                v.Nom,
+                v.Torn,
+                Animals = v.Animals.Count,
+                v.MinutsPasseig
+            })
+            .ToList();
+
+        if (llista.Count == 0)
+        {
+            Console.WriteLine($"Cap voluntari té cura de {minAnimals} animals o més");
+        }
+
+        // El número d'ordre no és a la BD: es posa en recórrer la llista
+        int n = 1;
+        foreach (var x in llista)
+        {
+            Console.WriteLine($"{n}. {x.Nom} ({x.Torn}) - animals: {x.Animals} - {x.MinutsPasseig} min");
+            n++;
+        }
+    }
+
+    // Nivell 3 · r
+    public List<Voluntari> VoluntarisDeSeniors()
+    {
+        // La data límit es calcula ABANS: dins el Where, EF no sap traduir un mètode nostre (Edat()) a SQL
+        // i peta en executar la consulta (InvalidOperationException: "could not be translated").
+        // Sènior = 8 anys o més = nascut el dia d'avui de fa 8 anys o abans.
+        // (A la P5 restàvem els anys, però allà el càlcul es feia en C#, no a la BD)
+        DateTime limit = DateTime.Today.AddYears(-8);
+
+        // Any: algun dels seus animals és un gos nascut abans del límit. Es tradueix a un EXISTS
+        List<Voluntari> llista = _context.Voluntari
+            .Where(v => v.Animals.Any(a => a.Especie == Especie.GOS && a.DataNaixement <= limit))
+            .ToList();
+        return llista;
+    }
 }

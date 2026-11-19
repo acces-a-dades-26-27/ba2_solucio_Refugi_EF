@@ -440,3 +440,70 @@ Console.WriteLine($"Despesa acumulada de la Nala: {nalaBD.DespesaAcumulada:F2} �
 // ============ Nivell 3 · Resum del mes ============
 // Surt al final de cada crida. Mesos 1 i 2: total 544,60 €, la Nala la més cara (85,80 €).
 // Mes 3: total 458,80 €, la Nala continua sent la més cara (78,00 €)
+
+
+// ================================================================
+// ============ SESSIÓ 6 · VISITES I ESTADÍSTIQUES ================
+// ================================================================
+
+// Les visites són aleatòries: cada execució surt diferent.
+// Per comprovar el nivell 2: cap visita abans de l'entrada de l'animal ni després de l'adopció.
+// El Thor (retornat a P2) i tots els animals de P4 (Nala, Coco, Rocky, Bimba i les cries) van entrar avui:
+// totes les seves visites han de ser d'avui. Les del Bruc, entre el 15/06/2024 i el 03/10/2025
+
+VisitaService visitaService = new VisitaService(db);
+
+// ============ Nivell 1 ============
+Console.WriteLine("\n--- Generar 30 visites ---");
+visitaService.GenerarVisites(30);
+
+Console.WriteLine("\n--- Estadístiques per espècie ---");
+animalService.EstadistiquesPerEspecie();
+
+// ============ Nivell 2 ============
+// Comprovació: ho llegim de la BD. Si el generador està bé, cap visita fora de dates
+int foraDeDates = db.Visita.Count(v => v.Data < v.Animal.DataEntrada
+    || v.Data > DateTime.Today
+    || (v.Animal.DataAdopcio != null && v.Data > v.Animal.DataAdopcio));
+Console.WriteLine($"\nVisites fora de dates (ha de ser 0): {foraDeDates}");
+
+// Comprovació: el cost mínim i màxim de cada motiu ha de quedar dins el seu rang.
+// REVISIO 30-60, VACUNA 25-50, FERIDA 60-150, CIRURGIA 250-600
+Console.WriteLine("\n--- Rang de cost per motiu ---");
+var rangs = db.Visita
+    .GroupBy(v => v.Motiu)
+    .Select(g => new { Motiu = g.Key, Min = g.Min(v => v.Cost), Max = g.Max(v => v.Cost) })
+    .ToList();
+foreach (var r in rangs)
+{
+    Console.WriteLine($"{r.Motiu}: de {r.Min} a {r.Max} €");
+}
+
+Console.WriteLine("\n--- Estadístiques per motiu ---");
+visitaService.EstadistiquesPerMotiu();
+
+// Des de P3: l'Aina té la Luna i el Pelut (75 min), el Joan la Lluna i la Núria el Thor.
+// Surt l'Aina primer (2 animals) i després el Joan i la Núria (1). Entre ells dos l'ordre no està definit
+Console.WriteLine("\n--- Voluntaris amb 1 animal o més ---");
+voluntariService.LlistatVoluntaris(1);
+Console.WriteLine("\n--- Voluntaris amb 5 animals o més ---");
+voluntariService.LlistatVoluntaris(5);    // cap: el màxim és 4
+
+// ============ Nivell 3 ============
+// Amb les dades de P5 no en surt cap: el Thor fa 7 anys i el Pelut és sènior però és un GAT.
+// Per provar-ho, la Núria agafa la Nala (gos, 9 anys). Error típic: no comprovar l'espècie i que surti l'Aina pel Pelut
+voluntariService.AssignarAnimal("Núria", "724098100000011");
+Console.WriteLine("\n--- Voluntaris que tenen cura d'algun gos sènior (només la Núria) ---");
+List<Voluntari> deSeniors = voluntariService.VoluntarisDeSeniors();
+if (deSeniors.Count == 0)
+{
+    Console.WriteLine("Cap");
+}
+foreach (Voluntari v in deSeniors)
+{
+    Console.WriteLine(v);
+}
+
+Console.WriteLine("\n--- Estadístiques per mes ---");
+visitaService.EstadistiquesPerMes();
+

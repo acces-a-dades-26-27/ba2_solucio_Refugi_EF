@@ -342,4 +342,36 @@ public class AnimalService
             Console.WriteLine($"L'animal que ha costat més aquest mes: {mesCar.Nom} ({despesaMesCar:F2} €)");
         }
     }
+
+    // ================================================================
+    // P6 · ESTADÍSTIQUES
+    // ================================================================
+
+    // Nivell 1 · n
+    public void EstadistiquesPerEspecie()
+    {
+        // Una sola consulta: GROUP BY Especie. Count amb condició compta només els que la compleixen.
+        // Error típic: un foreach per espècie amb una consulta per cada una (5 consultes, no una)
+        var perEspecie = _context.Animal
+            .GroupBy(a => a.Especie)
+            .Select(g => new
+            {
+                Especie = g.Key,
+                Total = g.Count(),
+                Adoptats = g.Count(a => a.EstaAdoptat),
+                Disponibles = g.Count(a => !a.EstaAdoptat),
+                PesMitja = g.Average(a => a.Pes)
+            })
+            .OrderByDescending(x => x.Total)
+            .ToList();
+
+        // Així NO: _context.Animal.ToList().GroupBy(...). Porta tots els animals a memòria i agrupa en C#:
+        // el resultat surt bé, però no és una consulta a la BD i el nivell no compta.
+
+        // Les espècies sense cap animal (ALTRES) no surten: GroupBy només fa grups del que hi ha
+        foreach (var x in perEspecie)
+        {
+            Console.WriteLine($"{x.Especie}: {x.Total} animals · {x.Adoptats} adoptats · {x.Disponibles} disponibles · pes mitjà {x.PesMitja:F2} kg");
+        }
+    }
 }

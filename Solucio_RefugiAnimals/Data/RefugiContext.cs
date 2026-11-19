@@ -10,6 +10,7 @@ public class RefugiContext : DbContext
     public DbSet<Xip> Xip { get; set; }
     public DbSet<Adoptant> Adoptant { get; set; }   // P2: sense DbSet no podem fer _context.Adoptant
     public DbSet<Voluntari> Voluntari { get; set; } // P3. La taula Cura NO té DbSet: és la intermèdia i la gestiona EF
+    public DbSet<Visita> Visita { get; set; }       // P6
 
     // 2 · On és la BD i els proxies del lazy loading
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -71,6 +72,20 @@ public class RefugiContext : DbContext
             .OnDelete(DeleteBehavior.SetNull);  // si s'esborra la mare, les cries queden sense mare.
                                                 // Restrict (la de la pista) també val: no deixa esborrar una mare amb cries.
                                                 // Amb Cascade s'esborrarien les cries!
+
+        // P6 · Animal 1 → N Visita. Com l'Adoptant, però OBLIGATÒRIA: la FK va a Visita i no pot ser NULL.
+        modelBuilder.Entity<Visita>()
+            .HasOne(v => v.Animal)
+            .WithMany(a => a.Visites)
+            .HasForeignKey("AnimalID")          // columna AnimalID a la taula Visita (int, NOT NULL)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);  // si s'esborra l'animal, s'esborren les seves visites.
+                                                // Aquí SÍ Cascade: una visita sense animal no té sentit
+
+        // Com l'Especie i el Torn: el motiu surt com a text a la BD
+        modelBuilder.Entity<Visita>()
+            .Property(v => v.Motiu)
+            .HasConversion<string>();
 
         // [Range] i el mínim de [StringLength] EF no els comprova en desar.
         // Amb un CHECK ho comprova la BD: SQLite sí que el respecta i, si no es compleix, SaveChanges peta.
